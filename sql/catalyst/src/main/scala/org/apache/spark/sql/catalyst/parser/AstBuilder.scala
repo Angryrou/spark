@@ -979,9 +979,9 @@ class AstBuilder extends DataTypeAstBuilder
    * Add ORDER BY/SORT BY/CLUSTER BY/DISTRIBUTE BY/LIMIT/WINDOWS clauses to the logical plan. These
    * clauses determine the shape (ordering/partitioning/rows) of the query result.
    *
-   * If 'forPipeOperators' is true, throws an error if the WINDOW clause is present (since this is
-   * not currently supported) or if more than one clause is present (this can be useful when parsing
-   * clauses used with pipe operations which only allow one instance of these clauses each).
+   * If 'forPipeOperators' is true, throws an error if more than one clause is present (this can be
+   * useful when parsing clauses used with pipe operations which only allow one instance of these
+   * clauses each).
    */
   private def withQueryResultClauses(
       ctx: QueryOrganizationContext,
@@ -1023,11 +1023,21 @@ class AstBuilder extends DataTypeAstBuilder
 
     // WINDOWS
     val withWindow = withOrder.optionalMap(windowClause) {
+      if (forPipeOperators && clause.nonEmpty) {
+        throw QueryParsingErrors.multipleQueryResultClausesWithPipeOperatorsUnsupportedError(
+          ctx, clause, PipeOperators.windowClause)
+      }
+      // WINDOW are LIMIT are not supported at the same time
+      if (forPipeOperators && limit != null) {
+        throw QueryParsingErrors.multipleQueryResultClausesWithPipeOperatorsUnsupportedError(
+          ctx, PipeOperators.windowClause, PipeOperators.limitClause)
+      }
+      // WINDOW are OFFSET are not supported at the same time
+      if (forPipeOperators && offset != null) {
+        throw QueryParsingErrors.multipleQueryResultClausesWithPipeOperatorsUnsupportedError(
+          ctx, PipeOperators.windowClause, PipeOperators.offsetClause)
+      }
       withWindowClause
-    }
-    if (forPipeOperators && windowClause != null) {
-      throw QueryParsingErrors.clausesWithPipeOperatorsUnsupportedError(
-        ctx, s"the ${PipeOperators.windowClause} clause")
     }
 
     // OFFSET
@@ -1051,6 +1061,8 @@ class AstBuilder extends DataTypeAstBuilder
       clause = PipeOperators.limitClause
       Limit(typedVisit(limit), withOffset)
     }
+
+
   }
 
   /**

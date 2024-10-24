@@ -966,6 +966,14 @@ class SparkSqlParserSuite extends AnalysisTest with SharedSparkSession {
       checkRepartition("TABLE t |> DISTRIBUTE BY x |> WHERE x = 1")
       checkRepartition("TABLE t |> CLUSTER BY x |> TABLESAMPLE (100 PERCENT)")
       checkRepartition("TABLE t |> SORT BY x DISTRIBUTE BY x")
+      // Window operations
+      def checkWindow(query: String): Unit = check(query, Seq(WITH_WINDOW_DEFINITION))
+      checkWindow(
+        """
+          |TABLE windowTestData
+          ||> WINDOW w as (PARTITION BY cate ORDER BY val)
+          ||> SELECT cate, val, SUM(val) OVER w
+        """.stripMargin)
     }
   }
 }

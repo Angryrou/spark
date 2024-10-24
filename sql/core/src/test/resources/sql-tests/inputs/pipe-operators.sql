@@ -667,7 +667,7 @@ table t
 
 -- The WINDOW clause is not supported yet.
 table windowTestData
-|> window w as (partition by cte order by val)
+|> window w as (partition by cate order by val)
 |> select cate, sum(val) over w;
 
 -- WINDOW and LIMIT are not supported at the same time.
