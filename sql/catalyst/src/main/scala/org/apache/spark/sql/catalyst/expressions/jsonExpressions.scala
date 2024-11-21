@@ -26,7 +26,7 @@ import com.fasterxml.jackson.core.json.JsonReadFeature
 
 import org.apache.spark.SparkException
 import org.apache.spark.sql.catalyst.InternalRow
-import org.apache.spark.sql.catalyst.analysis.TypeCheckResult
+import org.apache.spark.sql.catalyst.analysis.{TypeCheckResult, UnresolvedException}
 import org.apache.spark.sql.catalyst.analysis.TypeCheckResult.DataTypeMismatch
 import org.apache.spark.sql.catalyst.expressions.codegen.{CodegenContext, CodeGenerator, CodegenFallback, ExprCode}
 import org.apache.spark.sql.catalyst.expressions.codegen.Block.BlockHelper
@@ -970,4 +970,23 @@ case class JsonObjectKeys(child: Expression)
 
   override protected def withNewChildInternal(newChild: Expression): JsonObjectKeys =
     copy(child = newChild)
+}
+
+/**
+ * A JSON path expression is used to extract values from a JSON string
+ * or a VARIANT using the : operator.
+ */
+case class SemiStructuredExtract(json: Expression, path: Expression) extends
+  BinaryExpression with Unevaluable with QueryErrorsBase {
+
+  override def left: Expression = json
+
+  override def right: Expression = path
+
+  override protected def withNewChildrenInternal(
+      newLeft: Expression, newRight: Expression): SemiStructuredExtract =
+    copy(json = newLeft, path = newRight)
+
+  override def dataType: DataType = throw new UnresolvedException("dataType")
+  override def nullable: Boolean = throw new UnresolvedException("nullable")
 }

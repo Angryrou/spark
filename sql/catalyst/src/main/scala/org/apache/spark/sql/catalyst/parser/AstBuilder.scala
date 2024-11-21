@@ -2684,6 +2684,38 @@ class AstBuilder extends DataTypeAstBuilder
   }
 
   /**
+   * Create a [[SemiStructuredExtract]] expression for ':' syntax
+   */
+  override def visitJsonPathExpression(
+    ctx: JsonPathExpressionContext): Expression = withOrigin(ctx) {
+    val left = expression(ctx.json)
+    val pathPrefix = if (ctx.path.firstPath.identifier() != null) "$." else "$"
+    val right = Literal(pathPrefix + ctx.path.getText)
+
+    // Use the last field of a json path expression as the Alias if it exists
+    var nameOption: Option[String] = None
+    if (ctx.path.firstPath.identifier() != null) {
+      nameOption = Some(ctx.path.firstPath.identifier().getText)
+    } else if (ctx.path.firstPath.bracketExpression() != null
+      && ctx.path.firstPath.bracketExpression().jsonPathKey().stringLit() != null) {
+      nameOption = Some(ctx.path.firstPath.bracketExpression().jsonPathKey().stringLit().getText)
+    }
+    ctx.path.continuedPath().asScala.foreach(contCtx => {
+      if (contCtx.identifier() != null) {
+        nameOption = Some(contCtx.identifier().getText)
+      } else if (contCtx.bracketExpression() != null
+        && contCtx.bracketExpression().jsonPathKey().stringLit() != null) {
+        nameOption = Some(contCtx.bracketExpression().jsonPathKey().stringLit().getText)
+      }
+    })
+
+    nameOption match {
+      case Some(name) => Alias(SemiStructuredExtract(left, right), name)()
+      case _ => SemiStructuredExtract(left, right)
+    }
+  }
+
+  /**
    * Create a [[CreateStruct]] expression.
    */
   override def visitStruct(ctx: StructContext): Expression = withOrigin(ctx) {

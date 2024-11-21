@@ -1142,6 +1142,7 @@ primaryExpression
     | LEFT_PAREN identifier (COMMA identifier)+ RIGHT_PAREN ARROW expression                   #lambda
     | value=primaryExpression LEFT_BRACKET index=valueExpression RIGHT_BRACKET                 #subscript
     | identifier                                                                               #columnReference
+    | json=primaryExpression COLON path=jsonPath                                               #jsonPathExpression
     | base=primaryExpression DOT fieldName=identifier                                          #dereference
     | LEFT_PAREN expression RIGHT_PAREN                                                        #parenthesizedExpression
     | EXTRACT LEFT_PAREN field=identifier FROM source=valueExpression RIGHT_PAREN              #extract
@@ -1229,6 +1230,30 @@ colPosition
 
 collateClause
     : COLLATE collationName=identifier
+    ;
+
+jsonPath
+    : firstPath continuedPath*
+    ;
+
+firstPath
+    : identifier
+    | bracketExpression
+    ;
+
+continuedPath
+    : DOT identifier
+    | bracketExpression
+    ;
+
+bracketExpression
+    : LEFT_BRACKET jsonPathKey RIGHT_BRACKET
+    ;
+
+jsonPathKey
+    : stringLit
+    | ASTERISK
+    | INTEGER_VALUE
     ;
 
 type
